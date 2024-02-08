@@ -7,7 +7,8 @@ import tempfile
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
-
+import requests
+import jsonpickle
 from rdkit.Chem import AllChem as Chem
 
 from .errors import DockingError, DockstringError, VinaError
@@ -84,6 +85,7 @@ class Target:
         :param targets_dir: directory in which the required files can be found. If None, a default path will be chosen.
         """
         self.name = name
+        self.web_dock_url = "http://localhost:8000"
 
         # Directory where the ligand and output files will be saved
         self._custom_working_dir = working_dir
@@ -157,6 +159,22 @@ class Target:
         if cmd_return.returncode != 0:
             raise VinaError(f'Docking with Vina failed: {output}')
 
+    def web_dock(self, smiles, return_mol=False):
+        params = {
+            "target": self.name,
+            "smiles": smiles,
+            "return_mol": return_mol,
+        }
+        r = requests.get(self.web_dock_url, params=params)
+        if r.status_code != 200:
+            raise ValueError(r.text)
+        r = r.json()
+
+        if return_mol:
+            r["details"]["ligand"] = jsonpickle.decode(r["details"]["ligand"])
+
+        return r["score"], r["details"]
+
     def dock(
         self,
         smiles: str,
@@ -164,6 +182,7 @@ class Target:
         num_cpus: Optional[int] = None,
         seed=974528263,
         verbose=False,
+        web=True,
     ) -> Tuple[Optional[float], Dict[str, Any]]:
         """
         Given a molecule, this method will return a docking score against the current target.
@@ -175,6 +194,10 @@ class Target:
         :param verbose: increase verbosity of log messages
         :return: docking score and dictionary containing all poses and binding free energies
         """
+
+        if web:
+            return self.web_dock(smiles)
+
         # Auxiliary files
         ligand_mol_file = self.working_dir / 'ligand.mol'
         ligand_pdbqt = self.working_dir / 'ligand.pdbqt'
