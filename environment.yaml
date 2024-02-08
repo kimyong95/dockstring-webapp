@@ -1,0 +1,13 @@
+name: dockstring-webapp
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.9
+  - rdkit>=2021.03,<2022.04
+  - openbabel=3.1.1
+  - dockstring=0.3.2
+  - pytest=7.4
+  - uvicorn=0.27
+  - fastapi=0.109
+  - jsonpickle=3.0
