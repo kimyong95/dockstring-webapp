@@ -1,6 +1,6 @@
 [build-system]
 # Minimum requirements for the build system to execute
-requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=45"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -20,7 +20,7 @@ keywords = ["docking", "ligand", "protein", "binding", "benchmark"]
 readme = "README.md"
 requires-python = ">=3.7"
 license = {file = "LICENSE"}
-dynamic = ["version"]  # version is set from git tags
+version = "0.3.2"
 
 # True dependencies are openbabel and rdkit.
 # However, openbabel seems to not be installable via pip (see e.g. https://github.com/openbabel/openbabel/issues/2571).

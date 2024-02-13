@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import requests
 import jsonpickle
 from rdkit.Chem import AllChem as Chem
-
+from requests.adapters import HTTPAdapter
 from .errors import DockingError, DockstringError, VinaError
 from .utils import (
     PathType,
@@ -91,6 +91,8 @@ class Target:
         self._custom_working_dir = working_dir
         self._tmp_dir_handle: Optional[tempfile.TemporaryDirectory] = None
         self.targets_dir: Path = pathlib.Path(targets_dir) if targets_dir else get_targets_dir()
+        self.session = requests.Session()
+        self.session.mount('http://', HTTPAdapter(max_retries=5))
 
         # Ensure input files exist
         if not all(p.exists() for p in [self.pdbqt_path, self.conf_path]):
@@ -160,14 +162,16 @@ class Target:
             raise VinaError(f'Docking with Vina failed: {output}')
 
     def web_dock(self, smiles, return_mol=False):
-        params = {
+        data = {
             "target": self.name,
             "smiles": smiles,
             "return_mol": return_mol,
         }
-        r = requests.get(self.web_dock_url, params=params)
+        r = self.session.post(self.web_dock_url, json=data)
         if r.status_code != 200:
-            raise ValueError(r.text)
+            print(r.text)
+            return float("inf"), {}
+            # raise ValueError(r.text)
         r = r.json()
 
         if return_mol:
