@@ -169,9 +169,7 @@ class Target:
         }
         r = self.session.post(self.web_dock_url, json=data)
         if r.status_code != 200:
-            print(r.text)
-            return float("inf"), {}
-            # raise ValueError(r.text)
+            raise DockstringError(r.text)
         r = r.json()
 
         if return_mol:
