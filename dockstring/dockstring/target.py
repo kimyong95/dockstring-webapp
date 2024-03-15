@@ -10,7 +10,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import requests
 import jsonpickle
 from rdkit.Chem import AllChem as Chem
-from requests.adapters import HTTPAdapter
+from requests.adapters import HTTPAdapter, Retry
+from requests_cache import CachedSession
 from .errors import DockingError, DockstringError, VinaError
 from .utils import (
     PathType,
@@ -36,6 +37,7 @@ from .utils import (
     smiles_to_mol,
     verify_docked_ligand,
     write_mol_to_mol_file,
+    retry,
 )
 
 
@@ -91,8 +93,7 @@ class Target:
         self._custom_working_dir = working_dir
         self._tmp_dir_handle: Optional[tempfile.TemporaryDirectory] = None
         self.targets_dir: Path = pathlib.Path(targets_dir) if targets_dir else get_targets_dir()
-        self.session = requests.Session()
-        self.session.mount('http://', HTTPAdapter(max_retries=5))
+        self.session = CachedSession('docking', backend='sqlite', allowable_methods=['GET', 'POST'])
 
         # Ensure input files exist
         if not all(p.exists() for p in [self.pdbqt_path, self.conf_path]):
@@ -161,6 +162,7 @@ class Target:
         if cmd_return.returncode != 0:
             raise VinaError(f'Docking with Vina failed: {output}')
 
+    @retry(times=16, exceptions=(requests.ConnectionError,))
     def web_dock(self, smiles, return_mol=False):
         data = {
             "target": self.name,

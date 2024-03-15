@@ -8,6 +8,7 @@ import sys
 import warnings
 from pathlib import Path
 from typing import Dict, List, Optional, Union
+import time
 
 import pkg_resources  # type: ignore  # no type hints for this package
 from rdkit import rdBase
@@ -488,3 +489,30 @@ def parse_search_box_conf(conf_file: PathType) -> Dict[str, float]:
 
         assert len(d) == 6
         return d
+
+def retry(times, exceptions, backoff_factor=1):
+    """
+    Retry Decorator
+    Retries the wrapped function/method `times` times if the exceptions listed
+    in ``exceptions`` are thrown
+    :param times: The number of times to repeat the wrapped function/method
+    :type times: Int
+    :param Exceptions: Lists of exceptions that trigger a retry attempt
+    :type Exceptions: Tuple of Exceptions
+    """
+    def decorator(func):
+        def newfn(*args, **kwargs):
+            attempt = 0
+            while attempt < times:
+                try:
+                    return func(*args, **kwargs)
+                except exceptions:
+                    print(
+                        'Exception thrown when attempting to run %s, attempt '
+                        '%d of %d' % (func, attempt, times)
+                    )
+                    time.sleep(backoff_factor * 2**attempt)
+                    attempt += 1
+            return func(*args, **kwargs)
+        return newfn
+    return decorator
